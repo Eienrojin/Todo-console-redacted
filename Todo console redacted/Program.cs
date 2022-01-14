@@ -54,16 +54,30 @@ void MainMenu()
 
 void InitTask()
 {
-    Console.WriteLine("Напишите задачу... Чтобы отменить, напишите return");
+    Console.WriteLine("Напишите задачу...");
+    string task = InitChoiceOrBack();
 
-    string task = Console.ReadLine().Trim();
+    while (true)
+    {
+        Console.WriteLine("Задайте приоритет:" +
+            "\nA - Важное" +
+            "\nB - Средняя важность" +
+            "\nC - Маловажное");
 
-    if (task == "return")
-        MainMenu();
+        string priority = InitChoiceOrBack().ToUpper();
 
-    taskList.Add(task);
-
-    Console.WriteLine("Задача добавлена!");
+        if (priority == "A" || priority == "B" || priority == "C")
+        {
+            taskList.Add($"[{priority}] {task}");
+            Console.WriteLine("Задача добавлена!");
+            Console.ReadKey();
+            MainMenu();
+        }
+        else
+        {
+            WarningMessage.SendMessage();
+        }
+    }
 }
 
 void ShowTaskList()
@@ -83,23 +97,36 @@ void ShowTaskList()
 
 void DeleteTask()
 {
+    Console.Clear();
     ShowTaskList();
 
     Console.WriteLine("Введите номер записи, которую вы хотите удалить... ");
-    PrintReturnBack();
 
-    string choice = Console.ReadLine().Trim().ToLower();
+    int intChoice = 0;
+    string choice = InitChoiceOrBack();
 
-    if (choice == "return")
-        MainMenu();
-
-    taskList.RemoveAt(Convert.ToInt32(choice));
-
+    try
+    {
+        intChoice = Convert.ToInt32(choice);
+        taskList.RemoveAt(intChoice - 1);
+    }
+    catch (ArgumentOutOfRangeException)
+    {
+        WarningMessage.SendMessage();
+        DeleteTask();
+    }
 }
 
-void PrintReturnBack()
+string InitChoiceOrBack()
 {
-    Console.WriteLine("\nЕсли хотите вернуться назад, введите return");
+    Console.WriteLine("Если хотите вернуться назад, введите return");
+
+    string choice = Console.ReadLine().Trim();
+
+    if (choice.ToLower() == "return")
+        MainMenu();
+
+    return choice;
 }
 
 class WarningMessage
@@ -124,6 +151,7 @@ class WarningMessage
     }
 }
 
+//Попробовать использовать виртуальный метод
 class CheckDeleteChoice : WarningMessage
 {
     public bool CheckChoice(List<string> List)
