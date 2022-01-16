@@ -1,15 +1,18 @@
 List<string> taskList = new List<string>();
-taskList.Add("Тестовая запись");
-taskList.Add("Тестовая запись 2");
-taskList.Add("Тестовая запись 3");
-
-//Чтение записанного файла написать тут
-//
-//
 
 WarningMessage WarningMessage = new WarningMessage();
-CheckDeleteChoice CheckDeleteChoice = new CheckDeleteChoice();
+CheckDeleteChoice CheckList = new CheckDeleteChoice();
 
+string fileName = "SavedTasks.txt";
+string fullPath = Path.GetFullPath(fileName);
+
+using (FileStream fs = new FileStream(fileName, FileMode.OpenOrCreate))
+{
+    if (!File.Exists(fullPath))
+        File.Create(fullPath);
+}
+
+ReadFile();
 MainMenu();
 
 void MainMenu()
@@ -23,7 +26,7 @@ void MainMenu()
         "\n1. Добавить задачу" +
         "\n2. Удалить задачу" +
         "\n3. Изменить задачу" +
-        "\n4. ---" +
+        "\n4. Сохраниться" +
         "\n\"выход\" - для выхода");
 
         string answer = Console.ReadLine().Trim().ToLower();
@@ -34,21 +37,17 @@ void MainMenu()
                 WarningMessage.SendMessage();
                 break;
             case "1":
-                Console.Clear();
                 InitTask();
                 break;
             case "2":
-                Console.Clear();
-
-                if (CheckDeleteChoice.CheckLength(taskList, 2) == true)
+                if (CheckList.CheckLength(taskList) == true)
                     DeleteTask();
                 break;
             case "3":
-                Console.Clear();
                 EditTask();
                 break;
             case "4":
-                Console.Clear();
+                SaveFile(taskList);
                 break;
             case "выход":
                 Environment.Exit(0);
@@ -60,26 +59,33 @@ void MainMenu()
 
 void InitTask()
 {
+    Console.Clear();
     Console.WriteLine("Напишите задачу...");
     string task = InitChoiceOrBack();
 
+    string taskPriority = InitPriority(task);
+    taskList.Add($"[{taskPriority}] {task}");
+}
+
+string InitPriority(string task)
+{
     while (true)
     {
+        Console.Clear();
         Console.WriteLine("Задайте приоритет:" +
             "\nA - Важное" +
             "\nB - Средняя важность" +
             "\nC - Маловажное");
 
-        string priority = InitChoiceOrBack().ToUpper();
-        if (priority == "А" || priority == "В" || priority == "С") //В условии русские символы
-            priority = RussToEng(priority);
+        string taskPriority = InitChoiceOrBack().ToUpper();
+        if (taskPriority == "А" || taskPriority == "В" || taskPriority == "С") //В условии русские символы
+            taskPriority = RussToEng(taskPriority);
 
-        if (priority == "A" || priority == "B" || priority == "C")
+        if (taskPriority == "A" || taskPriority == "B" || taskPriority == "C")
         {
-            taskList.Add($"[{priority}] {task}");
-            Console.WriteLine("Задача добавлена!");
+            Console.WriteLine("Приоритет добавлен!");
             Console.ReadKey();
-            MainMenu();
+            return taskPriority;
         }
         else
         {
@@ -90,6 +96,7 @@ void InitTask()
 
 void DeleteTask()
 {
+    Console.Clear();
     ShowTaskList();
 
     Console.WriteLine("Введите номер записи, которую вы хотите удалить...");
@@ -112,6 +119,7 @@ void DeleteTask()
 
 void EditTask()
 {
+    Console.Clear();
     ShowTaskList();
 
     Console.WriteLine("Введите номер записи, которую вы хотите изменить...");
@@ -130,13 +138,23 @@ void EditTask()
     }
 
     indexOfList -= 1;
+    bool outOfRange = CheckList.CheckOutOfRange(taskList, indexOfList);
 
-    Console.Write($"{taskList.ElementAt(indexOfList)} --> ");
+    if (!outOfRange)
+    {
+        EditTask();
+    }
+    else
+    {
+        Console.Write($"[{taskList.ElementAt(indexOfList)}] ");
 
-    choice = InitChoiceOrBack();
+        choice = InitChoiceOrBack();
 
-    taskList.RemoveAt(indexOfList);
-    taskList.Insert(indexOfList, choice);
+        string choicePriority = InitPriority(choice);
+
+        taskList.RemoveAt(indexOfList);
+        taskList.Insert(indexOfList, $"[{choicePriority}] {choice}");
+    }
 }
 
 //Второстепенные методы 
@@ -182,10 +200,22 @@ string RussToEng(string choice)
     return choice;
 }
 
+//Сохранение и чтение
+void ReadFile()
+{
+    string[] lines = File.ReadAllLines(fullPath);
+
+    taskList = lines.ToList();
+}
+
+void SaveFile(List<string> taskList)
+{
+    File.WriteAllLines(fullPath, taskList);
+}
+
 class WarningMessage
 {
     protected bool Safe { get; set; }
-    protected string Message { get; set; }
 
     //Для вывода ошибки внутри чей-то логики с выбором надписи
     protected void SendMessage(string message)
@@ -206,12 +236,12 @@ class WarningMessage
 
 class CheckDeleteChoice : WarningMessage
 {
-    public bool CheckLength(List<string> List, int value)
+    public bool CheckLength(List<string> List)
     {
-        if (List.Count() < value)
+        if (List.Count() < 1)
         {
             Safe = false;
-            SendMessage("Записей слишком мало для удаления");
+            SendMessage("Нет записей для удаления");
 
             return Safe;
         }
@@ -222,14 +252,12 @@ class CheckDeleteChoice : WarningMessage
             return Safe;
         }
     }
-
-    //допилить
-    public bool CheckOutOfRange(List<string> List)
+    public bool CheckOutOfRange(List<string> List, int value)
     {
-        if (List.Count() < 2)
+        if (value <= -1|| List.Count() < value)
         {
             Safe = false;
-            SendMessage("Записей слишком мало для удаления");
+            SendMessage("Такой записи нет");
 
             return Safe;
         }
